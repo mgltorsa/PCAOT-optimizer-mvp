@@ -5,7 +5,7 @@ from models.experiments import Experiment
 from typing import List, Dict
 import json
 
-def prepare_tiling_experiment(experiment: Experiment, tiling_parameters: Dict[str:str]) -> List[Experiment]:
+def prepare_tiling_experiment(experiment: Experiment, tiling_parameters: Dict[str,str]) -> List[Experiment]:
     benchmark = experiment.benchmark_folder
     kernel = experiment.kernel_folder
     routine_name = experiment.routine_name

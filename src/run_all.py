@@ -13,7 +13,7 @@ def _run_baseline(experiment: Experiment):
 def _run_cetus_experiment(aot, parameters, experiment: Experiment):
     pass
 
-def _run_llm_experiments(aot, parameters: Dict[str], experiment: Experiment):
+def _run_llm_experiments(aot, parameters: Dict[str, str], experiment: Experiment):
     total_compilable_experiments = []
     
     for prompt_name, prompt_path in parameters.items():
