@@ -18,7 +18,7 @@ def _run_llm_experiments(aot, parameters: Dict[str], experiment: Experiment):
     
     for prompt_name, prompt_path in parameters.items():
         compilable_experiments = prepare_llm_experiment(aot, prompt_name, prompt_path, experiment)
-        total_compilable_experiments.append()
+        total_compilable_experiments.append(compilable_experiments)
     
     
     return total_compilable_experiments
@@ -51,8 +51,9 @@ if __name__ == "__main__":
     with open(experiment_plans_file_path_from_args, "r") as file:
         source_code_infos = [line.split(";")
                              for line in file.read().splitlines()[1:]]
-
-    aots = ['mock','cetus-tiling', 'cetus']
+#
+    # aots = ['mock','cetus-tiling', 'cetus']
+    aots = 'mock'
     # prompt_approaches = []
     parameters = {
         "mock":{
