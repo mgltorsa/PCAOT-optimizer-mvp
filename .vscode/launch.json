@@ -9,8 +9,12 @@
             "name": "Python Debugger: LLM-optimizer",
             "type": "debugpy",
             "request": "launch",
-            "program": "/mnt/d/workspace/ud-masters/research-ideas/LLM/pcaot/src/pcaot.py",
+            "program": "${workspaceFolder}/src/run_all.py",
+            "args": [
+                "/mnt/c/Users/josee/Downloads/llm-optimizer/planning/experiment_plans.csv"
+            ],
             "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env"
         },
     ]
 }
