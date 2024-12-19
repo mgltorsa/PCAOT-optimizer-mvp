@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/run_all.py",
             "args": [
-                "/mnt/c/Users/josee/Downloads/llm-optimizer/planning/experiment_plans.csv"
+                "${workspaceFolder}/planning/experiment_plans.csv"
             ],
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env"

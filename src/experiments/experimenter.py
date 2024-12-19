@@ -1,9 +1,9 @@
 import subprocess
 import os
 import sys
-from models.experiments import Experiment
+from models.experiments import RunnableExperiment
 
-def run_experiment(experiment: Experiment):
+def run_experiment(experiment: RunnableExperiment):
     
     compilation_flags = experiment.compilation_flags
     benchmark_folder = experiment.benchmark_folder
@@ -16,12 +16,21 @@ def run_experiment(experiment: Experiment):
         new_binary_folder="".join(no_serial_cflags)
     else:
         new_binary_folder="_".join(compilation_flags)
+        
+    new_binary_folder =new_binary_folder.replace(":","_")
     
     cores=4
-    if "SERIAL" in compilation_flags[0] and len(compilation_flags)==1:
+    if len(compilation_flags)>0 and "SERIAL" in compilation_flags[0] and len(compilation_flags)==1:
         cores=1
 
-    compilation_folder = f"{benchmark_folder}/bin/{kernel_folder}/{routine_folder}/{new_binary_folder}"
+    compilation_folder = f"{benchmark_folder}/bin/{kernel_folder}/"
+    
+    if experiment.parent_preparation_folder is not None:
+        compilation_folder += f"{experiment.parent_preparation_folder}/{new_binary_folder}"
+    else:
+        compilation_folder += f"{new_binary_folder}"
+        
+        
     executable = f"{compilation_folder}/{binary_file}"
     
     experiment_job_name = f"{kernel_folder}_{routine_folder}_{new_binary_folder}_job"

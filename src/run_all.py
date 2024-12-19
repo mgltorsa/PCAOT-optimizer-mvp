@@ -1,45 +1,55 @@
-from models.experiments import Experiment
-from preparation.preparation import prepare_llm_experiment, prepare_tiling_experiment
-from compilation.compiler import compile_experiment
-from experiments.experimenter import run_experiment as run_experimenter
+from models.experiments import Experiment, CompilableExperiment, RunnableExperiment
+from preparation.preparation import prepare_llm_experiment, prepare_cetus_experiment
+from compilation.compiler import compile_experiment as internal_compile_experiment
+from experiments.experimenter import run_experiment as internal_run_experiment
 import sys
-from typing import Dict
+from typing import Dict, List
 
 def _run_baseline(experiment: Experiment):
-    runnable_experiment = compile_experiment(experiment)
-    run_experimenter(runnable_experiment)
+    compilable_experiment = CompilableExperiment(experiment.benchmark_type, experiment.trials, 
+                                                 experiment.dataset, experiment.benchmark_folder, 
+                                                 experiment.kernel_folder, experiment.routine_name, experiment.routine_name, 
+                                                 experiment.binary_file, experiment.compilation_flags, 
+                                                 experiment.source_placeholder)
+    runnable_experiment = compile_experiment(compilable_experiment)
+    internal_run_experiment(runnable_experiment)
     pass
 
-def _run_cetus_experiment(aot, parameters, experiment: Experiment):
-    pass
+def _prepare_cetus_experiment(aot, experiment: Experiment, parameters: Dict[str, str]):
+    return prepare_cetus_experiment(aot, experiment, parameters)
 
-def _run_llm_experiments(aot, parameters: Dict[str, str], experiment: Experiment):
+def _prepare_llm_experiments(aot, experiment: Experiment, parameters: Dict[str, str]) -> List[Experiment]:
     total_compilable_experiments = []
     
     for prompt_name, prompt_path in parameters.items():
         compilable_experiments = prepare_llm_experiment(aot, prompt_name, prompt_path, experiment)
-        total_compilable_experiments.append(compilable_experiments)
+        total_compilable_experiments.extend(compilable_experiments)
     
     
     return total_compilable_experiments
 
-def run_experiment(aot, parameters, experiment: Experiment):
-    
+def prepare_experiments(aot, experiment: Experiment, parameters: Dict[str, str]) -> List[CompilableExperiment]:
     
     compilable_experiments = []
     aot_params = parameters[aot]
     
     if(aot == 'mock' or aot == 'gpt-4' or aot == 'llama'):
-        _run_llm_experiments(aot, aot_params, experiment)
+        compilable_experiments = _prepare_llm_experiments(aot, experiment, aot_params)
     
-    if aot == 'cetus-tiling':
-        _run_llm_experiments(aot, aot_params, experiment)
-
+    if aot == 'cetus-tiling' or aot=='cetus':
+        compilable_experiments = _prepare_cetus_experiment(aot, experiment, aot_params)
         
-    for compilable_experiment in compilable_experiments:
-        runnable_experiment = compile_experiment(compilable_experiment)
-        run_experimenter(runnable_experiment)
-    pass
+    return compilable_experiments
+    
+def compile_experiment(compilable_experiment: CompilableExperiment):
+    compilable_experiment.export_json("compilation")
+    runnable_experiment = internal_compile_experiment(compilable_experiment)
+    return runnable_experiment
+
+def run_experiment(runnable_experiment: RunnableExperiment):
+    runnable_experiment.export_json("runtime")
+    internal_run_experiment(runnable_experiment)
+    
 
 
 if __name__ == "__main__":
@@ -53,7 +63,7 @@ if __name__ == "__main__":
                              for line in file.read().splitlines()[1:]]
 #
     # aots = ['mock','cetus-tiling', 'cetus']
-    aots = 'mock'
+    aots =['mock', "cetus"]
     # prompt_approaches = []
     parameters = {
         "mock":{
@@ -70,15 +80,24 @@ if __name__ == "__main__":
             "tiling-level": "2",
         },
         "cetus":{
-            
+            "verbose": "3",
+            "profile-loops": "2"
         }
         
     }
 
     for benchmark_type, trials, dataset, benchmark_folder, kernel_folder, routine_name, source_placeholder, binary_file in source_code_infos:
         baseline_comp_flags = ["SERIAL"]
-        experiment = Experiment(benchmark_type, trials, dataset, benchmark_folder.strip(), kernel_folder.strip(
-        ), routine_name.strip(), binary_file.strip(), baseline_comp_flags, source_placeholder.strip())
+        
+        experiment = Experiment(benchmark_type, trials, dataset, benchmark_folder.strip(), kernel_folder.strip(), 
+                                routine_name.strip(), binary_file.strip(), baseline_comp_flags, source_placeholder.strip())
+        
         _run_baseline(experiment)
+        
+        compilable_experiments = []
         for aot in aots:
-            run_experiment(aot, parameters, experiment)
+            compilable_experiments.extend(prepare_experiments(aot, experiment, parameters))
+        
+        for compilable_experiment in compilable_experiments:
+            runnable_experiment = compile_experiment(compilable_experiment)
+            run_experiment(runnable_experiment)

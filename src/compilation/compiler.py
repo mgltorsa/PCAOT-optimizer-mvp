@@ -1,10 +1,10 @@
 import subprocess
 import os
 import sys
-from models.experiments import Experiment
+from models.experiments import CompilableExperiment, RunnableExperiment
 
 
-def compile_experiment(experiment: Experiment):
+def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
 
     compilation_flags = experiment.compilation_flags
 
@@ -17,6 +17,8 @@ def compile_experiment(experiment: Experiment):
         new_binary_folder = "".join(no_serial_cflags)
     else:
         new_binary_folder = "_".join(compilation_flags)
+
+    new_binary_folder = new_binary_folder.replace(":","_")
 
     # Build the command dynamically
     os.environ["CFLAGSLLMS"] = f"{d_compilation_flags}"
@@ -32,14 +34,22 @@ def compile_experiment(experiment: Experiment):
     benchmark_compilation_version = experiment.benchmark_type
     binary_file = experiment.binary_file
 
-    compilation_folder = f"{benchmark_folder}/bin/{kernel_folder}/{routine_folder}/{new_binary_folder}"
+    
+    compilation_folder = f"{benchmark_folder}/bin/{kernel_folder}/"
+    
+    if experiment.parent_preparation_folder is not None:
+        compilation_folder += f"{experiment.parent_preparation_folder}/{new_binary_folder}"
+    else:
+        compilation_folder += f"{new_binary_folder}"
+    
+    # compilation_folder = f"{kernel_folder}/{routine_folder}/{new_binary_folder}/bin"
     compilation_info_file = f"{compilation_folder}/compilation_info_CLASS_{class_type}.txt"
 
     source_placeholder = experiment.source_placeholder
 
     compilation_command = [
-        f"make -C {benchmark_folder}/{kernel_folder} clean > {compilation_info_file} 2>&1",
-        f"make -C {benchmark_folder}/{kernel_folder} CLASS={class_type} BINDIR={compilation_folder} {source_placeholder}={experiment.binary_file}.c  >> {compilation_info_file} 2>&1"
+        # f"make -C {benchmark_folder}/{kernel_folder} clean > {compilation_info_file} 2>&1",
+        f"make -C {benchmark_folder}/{kernel_folder} CLASS={class_type} BINDIR={compilation_folder} {source_placeholder}={experiment.routine_name}.c  >> {compilation_info_file} 2>&1"
     ]
 
     compilation_command = " && ".join(compilation_command)
@@ -80,8 +90,13 @@ def compile_experiment(experiment: Experiment):
 
     process.communicate()  # This waits for the process to finish and prints the output
 
-    process.stdout
-    process.stderr
-
-    return Experiment(experiment.benchmark_type, experiment.trials, experiment.dataset, experiment.benchmark_folder,
-                      experiment.kernel_folder, experiment.routine_name, binary_file, compilation_flags, experiment.source_placeholder)
+    return RunnableExperiment(experiment.benchmark_type, 
+                              experiment.trials, 
+                              experiment.dataset, 
+                              experiment.benchmark_folder,
+                              experiment.kernel_folder, 
+                              experiment.parent_preparation_folder, 
+                              experiment.routine_name, 
+                              binary_file, 
+                              compilation_flags, 
+                              experiment.source_placeholder)
