@@ -23,12 +23,12 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
     class_type = experiment.dataset
     benchmark_compilation_version = experiment.benchmark_type
     binary_file = experiment.binary_file
-
+    parent_preparation_folder = experiment.parent_preparation_folder
     
     compilation_folder = f"{benchmark_folder}/bin/{kernel_folder}/"
 
-    if experiment.parent_preparation_folder is not None:
-        compilation_folder += f"{experiment.parent_preparation_folder}/{new_binary_folder}"
+    if parent_preparation_folder is not None:
+        compilation_folder += f"{parent_preparation_folder}/{new_binary_folder}"
     else:
         compilation_folder += f"{new_binary_folder}"
 
@@ -41,7 +41,7 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
     d_cflags_str = "-D" + " -D".join(cflags)
 
     # Build the command dynamically
-    os.environ["CFLAGSLLMS"] = f"{d_cflags_str}"
+    os.environ["CFLAGSLLMS"] = f"{d_cflags_str} -I{parent_preparation_folder}"
 
     os.environ["CFLAGS"] = f"{d_cflags_str}"
 
@@ -54,10 +54,17 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
     compilation_info_file = f"{compilation_folder}/compilation_info_CLASS_{class_type}.txt"
 
     source_placeholder = experiment.source_placeholder
+    source_placeholder_value = f"{benchmark_folder}/{kernel_folder}/{parent_preparation_folder}/{experiment.routine_name}.c"
+    
+    cetus_papi_libs = f"{parent_preparation_folder}/cetus_papi.c"
+    cetus_checkpoint_libs = f"{parent_preparation_folder}/cetus_correctness.c"
+    
+    clibs_str = " ".join(["-lm", "-lpapi", "-fopenmp", cetus_papi_libs, cetus_checkpoint_libs])
+
 
     compilation_command = [
         # f"make -C {benchmark_folder}/{kernel_folder} clean > {compilation_info_file} 2>&1",
-        f"make -C {benchmark_folder}/{kernel_folder} CLASS={class_type} BINDIR={compilation_folder} {source_placeholder}={experiment.routine_name}.c  >> {compilation_info_file} 2>&1"
+        f"make -C {benchmark_folder}/{kernel_folder} CLASS={class_type} BINDIR={compilation_folder} {source_placeholder}={source_placeholder_value} C_LIB={clibs_str}  >> {compilation_info_file} 2>&1"
     ]
 
     compilation_command = " && ".join(compilation_command)
@@ -66,7 +73,7 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
         # linear-algebra/kernels/atax/atax.c -DPOLYBENCH_TIME -o atax_time
         compilation_command = [
             f"gcc -std=c99  -O3 -I {benchmark_folder}/utilities -I {benchmark_folder}/{kernel_folder}/{routine_folder} {benchmark_folder}/utilities/polybench.c",
-            f"{benchmark_folder}/{kernel_folder}/{routine_folder}/{binary_file}.c -DPOLYBENCH_TIME -DCORRECTNESS -D{class_type} {d_cflags_str}  -o {benchmark_folder}/bin/{binary_file} -lm -fopenmp  > {compilation_info_file} 2>&1"
+            f"{source_placeholder_value} -DPOLYBENCH_TIME -DCORRECTNESS -D{class_type} {d_cflags_str}  -o {benchmark_folder}/bin/{binary_file} -lm -fopenmp  > {compilation_info_file} 2>&1"
         ]
 
         # Temporaly for tiling
