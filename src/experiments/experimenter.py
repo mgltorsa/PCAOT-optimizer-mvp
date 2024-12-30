@@ -1,7 +1,24 @@
 import subprocess
-import os
-import sys
 from models.experiments import RunnableExperiment
+from typing import List
+
+def get_profile_loops(experiment: RunnableExperiment) -> List[str]:
+    compilation_flags = experiment.compilation_flags
+    loops = set()
+    for flag in compilation_flags:
+        if "LOOP_" in flag:
+            loop_id = flag.split("_")[-1]
+            loops.add(loop_id)
+    return loops
+
+def get_runtime_wrapper_args(experiment: RunnableExperiment):
+    compilation_flags = experiment.compilation_flags
+    if len(compilation_flags)>1 and "SERIAL" in compilation_flags:
+        loops = get_profile_loops(experiment)
+        loops_arg_str = "-ploops=" + " -ploops=".join(loops)
+        return loops_arg_str
+    else:
+        return "-pfull"
 
 def run_experiment(experiment: RunnableExperiment):
     
@@ -31,10 +48,14 @@ def run_experiment(experiment: RunnableExperiment):
         compilation_folder += f"{new_binary_folder}"
         
         
+    runtime_wrapper_executable = f"runtime_wrapper.py"
     executable = f"{compilation_folder}/{binary_file}"
+    executable_args = "-pargs=" + " -pargs=".join(experiment.compilation_flags)
+
+    runtime_wrapper_args = get_runtime_wrapper_args(experiment)
     
+
     experiment_job_name = f"{kernel_folder}_{routine_folder}_{new_binary_folder}_job"
-    
     
     sbatch_content = f"""#!/bin/bash
 #SBATCH --partition=standard
@@ -56,7 +77,7 @@ def run_experiment(experiment: RunnableExperiment):
 export OMP_NUM_THREADS=4
 
 cd {compilation_folder}
-{executable}
+{runtime_wrapper_executable} {executable} {executable_args} {runtime_wrapper_args}
 """
 
     
