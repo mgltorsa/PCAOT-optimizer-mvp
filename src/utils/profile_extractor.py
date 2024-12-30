@@ -1,6 +1,8 @@
 from typing import  Dict, Any
 import re
 
+ALL_LOOPS_PROFILE_FLAG = -1
+# ALL_PROGRAM_PROFILE_FLAG = -2
 
 papi_features = [
     "PAPI_TOT_INS",
@@ -38,6 +40,7 @@ def extract_hw_counters(output: str, loop_index: int) -> Dict[str, Any]:
         if feature_value:
             feature_name = papi_features_name_mapping[feature]
             extracted_hw_counters[feature_name] = int(feature_value[0])
+
     return extracted_hw_counters
 
 def collect_profiled_features(output: str, loop_index: int) -> Dict[str, Any]:

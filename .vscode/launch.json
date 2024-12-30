@@ -16,5 +16,32 @@
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env"
         },
+        {
+            "name": "Python Debugger: Runtime_wrapper FULL profiler",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/runtime_wrapper.py",
+            "args": [
+                "/mnt/d/workspace/ud-masters/benchmarks/NPB3.3-SER-C-tiling/bin/BT/rhs/baseline/SERIAL/bt.A.x",
+                "-pargs=SERIAL",
+                "-pfull"
+            ],
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Python Debugger: Runtime_wrapper Loops profiler",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/runtime_wrapper.py",
+            "args": [
+                "/mnt/d/workspace/ud-masters/benchmarks/NPB3.3-SER-C-tiling/bin/BT/rhs/naive-tiler/MOCK_NAIVE_TILER_1_LOOP_1/bt.A.x",
+                "-pargs=SERIAL",
+                "-pargs=MOCK_NAIVE:TILER_1_LOOP_1",
+                "-ploops=1",
+            ],
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env"
+        },
     ]
 }

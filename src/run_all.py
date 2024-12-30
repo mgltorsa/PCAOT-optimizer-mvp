@@ -1,5 +1,5 @@
 from models.experiments import Experiment, CompilableExperiment, RunnableExperiment
-from preparation.preparation import prepare_llm_experiment, prepare_cetus_experiment
+from preparation.preparation import prepare_llm_experiment, prepare_cetus_experiment, prepare_cetus_baseline
 from compilation.compiler import compile_experiment as internal_compile_experiment
 from experiments.experimenter import run_experiment as internal_run_experiment
 import sys
@@ -9,11 +9,12 @@ available_llms = ['mock', 'gpt-4', 'llama']
 available_compilers = ['cetus', 'cetus-tiling']
 
 def _run_baseline(experiment: Experiment):
-    compilable_experiment = CompilableExperiment(experiment.benchmark_type, experiment.trials, 
-                                                 experiment.dataset, experiment.benchmark_folder, 
-                                                 experiment.kernel_folder, experiment.routine_name, experiment.routine_name, 
-                                                 experiment.binary_file, experiment.compilation_flags, 
-                                                 experiment.source_placeholder)
+    compilable_experiment = prepare_cetus_baseline(experiment)
+    # compilable_experiment = CompilableExperiment(experiment.benchmark_type, experiment.trials, 
+    #                                              experiment.dataset, experiment.benchmark_folder, 
+    #                                              experiment.kernel_folder, experiment.routine_name, experiment.routine_name, 
+    #                                              experiment.binary_file, experiment.compilation_flags, 
+    #                                              experiment.source_placeholder)
     runnable_experiment = compile_experiment(compilable_experiment)
     internal_run_experiment(runnable_experiment)
     pass
@@ -64,7 +65,8 @@ if __name__ == "__main__":
                              for line in file.read().splitlines()[1:]]
 #
     # aots = ['mock','cetus-tiling', 'cetus']
-    aots =["cetus", 'cetus-tiling']
+    # aots =["cetus", 'cetus-tiling']
+    aots =['mock']
     # prompt_approaches = []
     parameters = {
         "mock":{
@@ -90,16 +92,22 @@ if __name__ == "__main__":
     for benchmark_type, trials, dataset, benchmark_folder, kernel_folder, routine_name, source_placeholder, binary_file in source_code_infos:
         baseline_comp_flags = ["SERIAL"]
         
-        experiment = Experiment(benchmark_type, trials, dataset, benchmark_folder.strip(), kernel_folder.strip(), 
+        try:
+            experiment = Experiment(benchmark_type, trials, dataset, benchmark_folder.strip(), kernel_folder.strip(), 
                                 routine_name.strip(), binary_file.strip(), baseline_comp_flags, source_placeholder.strip())
+
+            
+            _run_baseline(experiment)
+            
+            compilable_experiments = []
+            for aot in aots:
+                prepared_experiments = prepare_experiments(aot, experiment, parameters)
+                compilable_experiments.extend(prepared_experiments)
+            
+            for compilable_experiment in compilable_experiments:
+                runnable_experiment = compile_experiment(compilable_experiment)
+                run_experiment(runnable_experiment)
         
-        _run_baseline(experiment)
-        
-        compilable_experiments = []
-        for aot in aots:
-            prepared_experiments = prepare_experiments(aot, experiment, parameters)
-            compilable_experiments.extend(prepare_cetus_experiment)
-        
-        for compilable_experiment in compilable_experiments:
-            runnable_experiment = compile_experiment(compilable_experiment)
-            run_experiment(runnable_experiment)
+        except Exception as e:
+            print(f"Error creating experiment-{routine_name}: {e}")
+            continue

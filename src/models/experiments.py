@@ -1,6 +1,5 @@
 import json
 import os
-from utils.checkpointing import get_flags_name
 
 class Experiment():
     def __init__(self, benchmark_type, trials, dataset, benchmark_folder, kernel_folder, routine_name, binary_file, compilation_flags=[], source_placeholder=""):
@@ -84,3 +83,10 @@ def experiment_from_json(file_path:str, last_step:str) -> Experiment:
     else:
         return RunnableExperiment(json_obj["benchmark_type"], json_obj["trials"], json_obj["dataset"], json_obj["benchmark_folder"], json_obj["kernel_folder"], json_obj["parent_preparation_folder"], json_obj["routine_name"], json_obj["binary_file"], json_obj["compilation_flags"], json_obj["source_placeholder"])
 
+def get_flags_name(flags) -> str:
+    flag_name = ""
+    for raw_flag in flags:
+        flag = raw_flag.replace(":", "_")
+        flag_name += f"{flag}_"
+    flag_name = flag_name[:-1]
+    return flag_name

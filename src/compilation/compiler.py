@@ -1,6 +1,5 @@
 import subprocess
 import os
-import sys
 from models.experiments import CompilableExperiment, RunnableExperiment
 from utils.checkpointing import save_checkpoint, load_checkpoint,exists_checkpoint
 
@@ -9,9 +8,7 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
     compilation_flags = experiment.compilation_flags
 
     # Define the options dynamically
-    d_compilation_flags = "-D" + " -D".join(compilation_flags)
 
-    # print(d_compilation_flags)
     if (len(compilation_flags) > 1):
         no_serial_cflags = compilation_flags[1:]
         new_binary_folder = "".join(no_serial_cflags)
@@ -19,13 +16,6 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
         new_binary_folder = "_".join(compilation_flags)
 
     new_binary_folder = new_binary_folder.replace(":","_")
-
-    # Build the command dynamically
-    os.environ["CFLAGSLLMS"] = f"{d_compilation_flags}"
-
-    cpath = experiment.get_c_path()
-
-    os.environ["CPATH"] = f"{cpath}"
 
     benchmark_folder = experiment.benchmark_folder
     kernel_folder = experiment.kernel_folder
@@ -36,12 +26,30 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
 
     
     compilation_folder = f"{benchmark_folder}/bin/{kernel_folder}/"
-    
+
     if experiment.parent_preparation_folder is not None:
         compilation_folder += f"{experiment.parent_preparation_folder}/{new_binary_folder}"
     else:
         compilation_folder += f"{new_binary_folder}"
-    
+
+    root_file_base_flag = f"ROOT_FILE_BASE={compilation_folder}"
+
+    extra_cflags = ['CETUS_PAPI', 'CETUS_CHECKPOINT_WRITE', root_file_base_flag]
+
+    cflags =[*extra_cflags, *compilation_flags]
+
+    d_cflags_str = "-D" + " -D".join(cflags)
+
+    # Build the command dynamically
+    os.environ["CFLAGSLLMS"] = f"{d_cflags_str}"
+
+    os.environ["CFLAGS"] = f"{d_cflags_str}"
+
+    cpath = experiment.get_c_path()
+
+    os.environ["CPATH"] = f"{cpath}"
+
+
     # compilation_folder = f"{kernel_folder}/{routine_folder}/{new_binary_folder}/bin"
     compilation_info_file = f"{compilation_folder}/compilation_info_CLASS_{class_type}.txt"
 
@@ -58,13 +66,13 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
         # linear-algebra/kernels/atax/atax.c -DPOLYBENCH_TIME -o atax_time
         compilation_command = [
             f"gcc -std=c99  -O3 -I {benchmark_folder}/utilities -I {benchmark_folder}/{kernel_folder}/{routine_folder} {benchmark_folder}/utilities/polybench.c",
-            f"{benchmark_folder}/{kernel_folder}/{routine_folder}/{binary_file}.c -DPOLYBENCH_TIME -DCORRECTNESS -D{class_type} {d_compilation_flags}  -o {benchmark_folder}/bin/{binary_file} -lm -fopenmp  > {compilation_info_file} 2>&1"
+            f"{benchmark_folder}/{kernel_folder}/{routine_folder}/{binary_file}.c -DPOLYBENCH_TIME -DCORRECTNESS -D{class_type} {d_cflags_str}  -o {benchmark_folder}/bin/{binary_file} -lm -fopenmp  > {compilation_info_file} 2>&1"
         ]
 
         # Temporaly for tiling
         # compilation_command = [
         #     f"gcc -std=c99  -O3 -I {benchmark_folder}/utilities -I {benchmark_folder}/{kernel_folder}/{routine_folder} {benchmark_folder}/utilities/polybench.c",
-        #     f"{benchmark_folder}/{kernel_folder}/{routine_folder}/{binary_file}_tiling.c -DPOLYBENCH_PAPI  -D{class_type} {d_compilation_flags} -o {benchmark_folder}/bin/{binary_file} -lm -lpapi -fopenmp  > {compilation_info_file} 2>&1"
+        #     f"{benchmark_folder}/{kernel_folder}/{routine_folder}/{binary_file}_tiling.c -DPOLYBENCH_PAPI  -D{class_type} {d_cflags_str} -o {benchmark_folder}/bin/{binary_file} -lm -lpapi -fopenmp  > {compilation_info_file} 2>&1"
         # ]
 
         compilation_command = " ".join(compilation_command)
@@ -85,8 +93,8 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
 
     print("COMMAND: ", command)
 
-    if exists_checkpoint(benchmark_folder, 'compilation', compilation_flags):
-        return load_checkpoint(benchmark_folder, 'compilation', compilation_flags)
+    if exists_checkpoint(benchmark_folder, kernel_folder, 'compilation', compilation_flags):
+        return load_checkpoint(benchmark_folder, kernel_folder, 'compilation', compilation_flags)
 
     process = subprocess.Popen(
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
