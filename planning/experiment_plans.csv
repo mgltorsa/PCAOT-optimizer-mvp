@@ -1,2 +1,2 @@
 bench;#trials;DATASET;benchmark_folder;kernel_folder;routine_name;binary_placeholder;expected_bin_name
-nas;3;B;/mnt/d/workspace/ud-masters/benchmarks/NPB3.3-SER-C-tiling;BT;rhs;RHS_SRC;bt.B.x
+nas;3;A;/mnt/d/workspace/ud-masters/benchmarks/NPB3.3-SER-C-tiling;BT;rhs;RHS_SRC;bt.A.x

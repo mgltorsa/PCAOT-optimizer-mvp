@@ -5,6 +5,9 @@ from experiments.experimenter import run_experiment as internal_run_experiment
 import sys
 from typing import Dict, List
 
+available_llms = ['mock', 'gpt-4', 'llama']
+available_compilers = ['cetus', 'cetus-tiling']
+
 def _run_baseline(experiment: Experiment):
     compilable_experiment = CompilableExperiment(experiment.benchmark_type, experiment.trials, 
                                                  experiment.dataset, experiment.benchmark_folder, 
@@ -33,21 +36,19 @@ def prepare_experiments(aot, experiment: Experiment, parameters: Dict[str, str])
     compilable_experiments = []
     aot_params = parameters[aot]
     
-    if(aot == 'mock' or aot == 'gpt-4' or aot == 'llama'):
+    if(aot in available_llms):
         compilable_experiments = _prepare_llm_experiments(aot, experiment, aot_params)
     
-    if aot == 'cetus-tiling' or aot=='cetus':
+    if aot in available_compilers:
         compilable_experiments = _prepare_cetus_experiment(aot, experiment, aot_params)
         
     return compilable_experiments
     
 def compile_experiment(compilable_experiment: CompilableExperiment):
-    compilable_experiment.export_json("compilation")
     runnable_experiment = internal_compile_experiment(compilable_experiment)
     return runnable_experiment
 
 def run_experiment(runnable_experiment: RunnableExperiment):
-    runnable_experiment.export_json("runtime")
     internal_run_experiment(runnable_experiment)
     
 
@@ -63,7 +64,7 @@ if __name__ == "__main__":
                              for line in file.read().splitlines()[1:]]
 #
     # aots = ['mock','cetus-tiling', 'cetus']
-    aots =['mock', "cetus"]
+    aots =["cetus", 'cetus-tiling']
     # prompt_approaches = []
     parameters = {
         "mock":{
@@ -96,7 +97,8 @@ if __name__ == "__main__":
         
         compilable_experiments = []
         for aot in aots:
-            compilable_experiments.extend(prepare_experiments(aot, experiment, parameters))
+            prepared_experiments = prepare_experiments(aot, experiment, parameters)
+            compilable_experiments.extend(prepare_cetus_experiment)
         
         for compilable_experiment in compilable_experiments:
             runnable_experiment = compile_experiment(compilable_experiment)

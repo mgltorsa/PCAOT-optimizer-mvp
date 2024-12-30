@@ -2,7 +2,7 @@ import subprocess
 import os
 import sys
 from models.experiments import CompilableExperiment, RunnableExperiment
-
+from utils.checkpointing import save_checkpoint, load_checkpoint,exists_checkpoint
 
 def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
 
@@ -85,10 +85,15 @@ def compile_experiment(experiment: CompilableExperiment)->RunnableExperiment:
 
     print("COMMAND: ", command)
 
+    if exists_checkpoint(benchmark_folder, 'compilation', compilation_flags):
+        return load_checkpoint(benchmark_folder, 'compilation', compilation_flags)
+
     process = subprocess.Popen(
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     process.communicate()  # This waits for the process to finish and prints the output
+
+    save_checkpoint(experiment, 'compilation')
 
     return RunnableExperiment(experiment.benchmark_type, 
                               experiment.trials, 

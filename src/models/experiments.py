@@ -1,5 +1,7 @@
 import json
 import os
+from utils.checkpointing import get_flags_name
+
 class Experiment():
     def __init__(self, benchmark_type, trials, dataset, benchmark_folder, kernel_folder, routine_name, binary_file, compilation_flags=[], source_placeholder=""):
         self.benchmark_type = benchmark_type
@@ -32,7 +34,7 @@ class Experiment():
         json_obj = self.to_json()
         json_obj["experiment_type"] = current_step
         
-        flags_name = "_".join(self.compilation_flags)
+        flags_name = get_flags_name(self.compilation_flags)
         runtime_folder = f"{self.benchmark_folder}/{self.kernel_folder}"
         file_path = f"{runtime_folder}/{current_step}-checkpoint/{flags_name}.json"
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -40,7 +42,7 @@ class Experiment():
         with open(file_path, "w") as file:
             json.dump(json_obj, file)
             file.close()
-            
+
     def get_c_path(self):
         if (self.benchmark_type == 'nas'):
             return f"{self.benchmark_folder}/common:{self.benchmark_folder}/{self.kernel_folder}"
@@ -70,3 +72,15 @@ class CompilableExperiment(Experiment):
         
 class RunnableExperiment(CompilableExperiment):
     pass
+
+
+def experiment_from_json(file_path:str, last_step:str) -> Experiment:
+    with open(file_path, "r") as file:
+        json_obj = json.load(file)
+        file.close()
+    
+    if(last_step == 'preparation'):
+        return CompilableExperiment(json_obj["benchmark_type"], json_obj["trials"], json_obj["dataset"], json_obj["benchmark_folder"], json_obj["kernel_folder"], json_obj["parent_preparation_folder"], json_obj["routine_name"], json_obj["binary_file"], json_obj["compilation_flags"], json_obj["source_placeholder"])
+    else:
+        return RunnableExperiment(json_obj["benchmark_type"], json_obj["trials"], json_obj["dataset"], json_obj["benchmark_folder"], json_obj["kernel_folder"], json_obj["parent_preparation_folder"], json_obj["routine_name"], json_obj["binary_file"], json_obj["compilation_flags"], json_obj["source_placeholder"])
+

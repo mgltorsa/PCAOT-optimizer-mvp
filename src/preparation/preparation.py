@@ -2,6 +2,7 @@ import subprocess
 import os
 import os
 from models.experiments import Experiment, CompilableExperiment
+from utils.checkpointing import save_checkpoint, load_checkpoint, exists_checkpoint, collect_llms_checkpoints
 from typing import List, Dict
 import json
 
@@ -21,10 +22,14 @@ def prepare_cetus_experiment(pass_name, experiment: Experiment, cetus_parameters
     
     opts_str = " ".join(opts)
     # Build the command dynamically
-    options = f"-verbosity=3 -paw-tiling -outdir={outdir} {opts_str}"
+    options = f"-verbosity=3 -outdir={outdir} {opts_str}"
     
     file_path = f"{benchmark}/{kernel}/{routine_name}.c"
     command = f"echo $CPATH && cetus_wsl {options} {file_path}"
+
+    if exists_checkpoint(benchmark, 'preparation', [pass_name]):
+        experiment = load_checkpoint(benchmark, 'preparation', [pass_name])
+        return [experiment]
     
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
@@ -33,7 +38,9 @@ def prepare_cetus_experiment(pass_name, experiment: Experiment, cetus_parameters
     errors = process.stderr
     
     compilable_experiment = CompilableExperiment(experiment.benchmark_type, experiment.trials, experiment.dataset, experiment.benchmark_folder,
-                                            experiment.kernel_folder, parent_experiment_path, experiment.routine_name, experiment.binary_file, [], experiment.source_placeholder)
+                                            experiment.kernel_folder, parent_experiment_path, experiment.routine_name, experiment.binary_file, [pass_name], experiment.source_placeholder)
+    
+    save_checkpoint(compilable_experiment, 'preparation')
     
     return [compilable_experiment]
     
@@ -83,6 +90,10 @@ def prepare_llm_experiment(llm, prompt_name, prompt_path, experiment: Experiment
     os.environ["HF_URL"] = ""
     os.environ["HF_URL"] = ""
 
+    checkpoints = collect_llms_checkpoints(benchmark, 'preparation')
+    if len(checkpoints) > 0:
+        return checkpoints
+
     try:
         # Execute the command
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -98,9 +109,13 @@ def prepare_llm_experiment(llm, prompt_name, prompt_path, experiment: Experiment
             for loop_flag in loop_flags:
                 if loop_flag == None or loop_flag == "":
                     continue
-                compilation_flags = [parent_name_flag, loop_flag]
+
+                compilation_flags = [parent_name_flag, loop_flag, "PCAOT_LLM"]
+                
                 compilable_experiment = CompilableExperiment(experiment.benchmark_type, experiment.trials, experiment.dataset, experiment.benchmark_folder,
                                             experiment.kernel_folder, parent_experiment_path, experiment.routine_name, experiment.binary_file, compilation_flags, experiment.source_placeholder)
+                
+                save_checkpoint(compilable_experiment, 'preparation')
                 compilable_experiments.append(compilable_experiment)
             
             
@@ -112,3 +127,5 @@ def prepare_llm_experiment(llm, prompt_name, prompt_path, experiment: Experiment
         print("ERROR: ", e)
         #TODO SAVE TO MONGO
         return []
+
+
