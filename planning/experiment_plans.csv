@@ -1,2 +1,2 @@
 bench;#trials;DATASET;benchmark_folder;kernel_folder;routine_name;binary_placeholder;expected_bin_name
-nas;3;B;/work/parot/mgltorsa/llms-tiling/benchmark/NPB3.3-SER-C;BT;rhs;RHS_SRC;bt.B.x
+nas;3;A;/work/parot/mgltorsa/llms-tiling/benchmark/NPB3.3-SER-C;BT;rhs;RHS_SRC;bt.A.x
