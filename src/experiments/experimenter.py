@@ -91,5 +91,5 @@ cd {compilation_folder}
 def exec_sbatch(script_file):
     sbatch_command = f"sbatch {script_file}"
     print("SBATCH COMMAND: ", sbatch_command)
-    process = subprocess.Popen(sbatch_command, shell=True)
-    process.communicate()  # This waits for the process to finish and prints the output
+    # process = subprocess.Popen(sbatch_command, shell=True)
+    # process.communicate()  # This waits for the process to finish and prints the output
